@@ -3,7 +3,6 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from . import models, schemas
-from .models import Password
 import bcrypt
 from passlib.context import CryptContext
 from .models import User, Password
@@ -97,3 +96,12 @@ async def delete_password(db: AsyncSession, password_id: int):
             await db.delete(db_password)
             await db.flush()
         return db_password
+
+
+async def get_user_passwords(db: AsyncSession, user_id: int):
+    result = await db.execute(select(Password).filter(Password.user_id == user_id))
+    return result.scalars().all()
+
+async def get_folder_passwords(db: AsyncSession, folder_id: int):
+    result = await db.execute(select(Password).filter(Password.folder_id == folder_id))
+    return result.scalars().all()

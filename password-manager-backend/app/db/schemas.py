@@ -42,7 +42,7 @@ class Password(BaseModel):
     password: str
     url: Optional[str] = None
     folder_id: Optional[int] = None
-    is_favorite: bool
+    is_favorite: Optional[bool] = False
     comment: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -66,11 +66,11 @@ class PasswordCreate(BaseModel):
         orm_mode = True
 
 class PasswordUpdate(BaseModel):
-    name: Optional[str] = None
-    login: Optional[str] = None
-    password: Optional[str] = None
-    url: Optional[str] = None
-    is_favorite: Optional[bool] = None
+    name: Optional[str]
+    login: Optional[str]
+    password: Optional[str]
+    url: Optional[str]
+    is_favorite: Optional[bool]
     comment: Optional[str]
 
     class Config:

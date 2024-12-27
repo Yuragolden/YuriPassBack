@@ -69,3 +69,8 @@ async def delete_folder(folder_id: int, db: AsyncSession = Depends(get_db)):
     return {"message": "Folder deleted successfully"}
 
 
+@router.get("/user/{user_id}", response_model=List[schemas.Folder])
+async def get_folders(user_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Folder).filter(models.Folder.user_id == user_id))
+    db_folders = result.scalars().all()
+    return db_folders

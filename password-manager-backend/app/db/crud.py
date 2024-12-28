@@ -34,7 +34,8 @@ async def create_password(db: AsyncSession, password: schemas.PasswordCreate):
     print(f"Password before saving: {hashed_password}")
 
     if not password.created_at:
-        password.created_at = date.today()
+        password.created_at = datetime.now().replace(microsecond=0)
+        print(password.created_at.replace(microsecond=0))
 
     db_password = Password(
         user_id=password.user_id,
@@ -44,16 +45,12 @@ async def create_password(db: AsyncSession, password: schemas.PasswordCreate):
         url=password.url,
         comment=password.comment,
         folder_id=password.folder_id,
-        is_favorite=password.is_favorite,
-        created_at = datetime.utcnow(),
-        # updated_at=datetime.utcnow(),
+        created_at = password.created_at,
     )
+
     db.add(db_password)
     await db.commit()
     await db.refresh(db_password)
-
-    db_password.created_at = db_password.created_at.strftime('%Y-%m-%d')
-    db_password.updated_at = db_password.updated_at.strftime('%Y-%m-%d')
 
     return db_password
 
@@ -96,12 +93,3 @@ async def delete_password(db: AsyncSession, password_id: int):
             await db.delete(db_password)
             await db.flush()
         return db_password
-
-
-async def get_user_passwords(db: AsyncSession, user_id: int):
-    result = await db.execute(select(Password).filter(Password.user_id == user_id))
-    return result.scalars().all()
-
-async def get_folder_passwords(db: AsyncSession, folder_id: int):
-    result = await db.execute(select(Password).filter(Password.folder_id == folder_id))
-    return result.scalars().all()

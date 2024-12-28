@@ -42,7 +42,6 @@ class Password(BaseModel):
     password: str
     url: Optional[str] = None
     folder_id: Optional[int] = None
-    is_favorite: Optional[bool] = False
     comment: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -52,15 +51,13 @@ class Password(BaseModel):
 
 class PasswordCreate(BaseModel):
     user_id: int
-    name: str  # Название пароля
-    login: str  # Логин
-    password: str  # Сам пароль
-    url: Optional[str] = None  # URL, если есть
-    folder_id: Optional[int] = None  # ID папки
-    is_favorite: Optional[bool] = False  # Добавить в избранное, если True
-    comment: Optional[str]
-    created_at: datetime
-    # updated_at: date = None
+    name: str
+    login: str
+    password: str
+    url: Optional[str] = None
+    folder_id: Optional[int] = None
+    comment: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         orm_mode = True
@@ -69,9 +66,11 @@ class PasswordUpdate(BaseModel):
     name: Optional[str]
     login: Optional[str]
     password: Optional[str]
+    folder_id: Optional[int]
     url: Optional[str]
-    is_favorite: Optional[bool]
     comment: Optional[str]
+    updated_at: Optional[datetime] = None
+
 
     class Config:
         orm_mode = True

@@ -29,32 +29,9 @@ class Password(Base):
     password = Column(String, nullable=False)
     url = Column(String, nullable=True)
     comment = Column(String, nullable=True)
-    is_favorite = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-    @property
-    def created_at_str(self):
-        # return self.created_at.isoformat() if self.created_at else None
-        return self.created_at.isoformat() if self.created_at else None
-
-    @property
-    def updated_at_str(self):
-        return self.updated_at.isoformat() if self.updated_at else None
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'login': self.login,
-            'password': self.password,
-            'url': self.url,
-            'comment': self.comment,
-            'is_favorite': self.is_favorite,
-            'created_at': self.created_at,
-            # 'updated_at': self.updated_at
-        }
+    # is_favorite = Column(Boolean, default=False)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
 
 # Таблица папок
 class Folder(Base):

@@ -1,4 +1,3 @@
-from datetime import date
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -30,8 +29,6 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
 async def create_password(db: AsyncSession, password: schemas.PasswordCreate):
-    hashed_password = hash_password(password.password)
-    print(f"Password before saving: {hashed_password}")
 
     if not password.created_at:
         password.created_at = datetime.now().replace(microsecond=0)
@@ -41,7 +38,7 @@ async def create_password(db: AsyncSession, password: schemas.PasswordCreate):
         user_id=password.user_id,
         name=password.name,
         login=password.login,
-        password=hashed_password,
+        password=password.password,
         url=password.url,
         comment=password.comment,
         folder_id=password.folder_id,
@@ -55,6 +52,13 @@ async def create_password(db: AsyncSession, password: schemas.PasswordCreate):
     return db_password
 
 
+async def get_user_by_id(user_id: int, db: AsyncSession):
+    result = await db.execute(select(User).filter(User.id == user_id))
+    user = result.scalars().first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
 async def get_password_by_id(db: AsyncSession, password_id: int):
     result = await db.execute(select(Password).filter(Password.id == password_id))
     password = result.scalars().first()
@@ -63,8 +67,8 @@ async def get_password_by_id(db: AsyncSession, password_id: int):
     return password
 
 
-async def get_password_by_name(db: AsyncSession, name: str):
-    result = await db.execute(select(Password).filter(Password.name == name))
+async def get_password_by_name(db: AsyncSession, name: str, user_id: int):
+    result = await db.execute(select(Password).filter(Password.name == name).filter(Password.user_id == user_id))
     return result.scalars().first()  # Возвращает первый результат или None
 
 
@@ -81,15 +85,36 @@ async def update_password(db: AsyncSession, password_id: int, password: schemas.
             db_password.name = password.name
             # db_password.password = password.password
             db_password.password = hash_password(password.password)
-            db_password.updated_at = db_password.updated_at.strftime('%Y-%m-%d')
+            db_password.updated_at = db_password.updated_at.datetime.now().replace(microsecond=0)
             await db.flush()
         return db_password
 
 
 async def delete_password(db: AsyncSession, password_id: int):
-    async with db.begin():
-        db_password = await get_password_by_id(db, password_id)
-        if db_password:
-            await db.delete(db_password)
-            await db.flush()
-        return db_password
+    # Получаем запись по ID
+    db_password = await get_password_by_id(db, password_id)
+    if not db_password:
+        raise HTTPException(status_code=404, detail="Password not found")
+
+    # Создаем копию данных для возврата
+    response_data = {
+        "id": db_password.id,
+        "user_id": db_password.user_id,
+        "name": db_password.name,
+        "login": db_password.login,
+        "password": db_password.password,
+        "created_at": db_password.created_at,
+        "updated_at": db_password.updated_at,
+        "comment": db_password.comment,
+        "url": db_password.url,
+        "folder_id": db_password.folder_id,
+    }
+
+    # Удаляем запись
+    await db.delete(db_password)
+    await db.commit()
+
+    # Возвращаем данные удаленного объекта
+    return response_data
+
+

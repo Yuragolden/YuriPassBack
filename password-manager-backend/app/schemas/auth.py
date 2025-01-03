@@ -5,6 +5,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     username: str
     password: str
+    master_password: str
 
 # Схема для ответа при успешной регистрации
 class RegisterResponse(BaseModel):
@@ -12,12 +13,14 @@ class RegisterResponse(BaseModel):
     email: str
     username: str
 
+
     class Config:
         orm_mode = True
 
 class LoginRequest(BaseModel):
     username: str
     password: str
+    master_password: str
     class Config:
         orm_mode = True
 

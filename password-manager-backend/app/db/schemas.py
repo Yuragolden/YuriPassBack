@@ -2,38 +2,6 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
-
-class UserResponse(BaseModel):
-    id: int
-    username: str
-    email: str
-    message: str
-
-    class Config:
-        orm_mode = True
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-    class Config:
-        orm_mode = True
-
-class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    class Config:
-        orm_mode = True
-
-
-class RegisterResponse(BaseModel):
-    id: int
-    username: str
-    email: str
-    message: str
-
-    class Config:
-        orm_mode = True
-
 class Password(BaseModel):
     id: int
     user_id: int
@@ -47,10 +15,10 @@ class Password(BaseModel):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PasswordCreate(BaseModel):
-    user_id: int
+    user_id: Optional[int] = 0
     name: str
     login: str
     password: str
@@ -60,7 +28,7 @@ class PasswordCreate(BaseModel):
     created_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PasswordUpdate(BaseModel):
     name: Optional[str]
@@ -73,18 +41,40 @@ class PasswordUpdate(BaseModel):
 
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class FolderCreate(BaseModel):
     name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Схема для отображения папки
 class Folder(FolderCreate):
     id: int
+    user_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class Company(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CompanyUser(BaseModel):
+    id: int
+    email: str
+    company_id: int
+
+    class Config:
+        from_attributes = True
+
+class PasswordResponse(BaseModel):
+    message: str
+    password_id: int

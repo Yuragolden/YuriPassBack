@@ -14,17 +14,10 @@ router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# Проверяем, существует ли пользователь с таким ID
-# result = await db.execute(select(models.User).filter(models.User.id == folder.user_id))
-# user = result.scalars().first()
-# if not user:
-#     raise HTTPException(status_code=404, detail="User not found")
-#
-
 # Маршрут для создания новой папки
-@router.post("/", response_model=schemas.Folder)
-async def create_folder(folder: schemas.FolderCreate, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    user = await get_current_user(db, token)
+@router.post("/{user_id}", response_model=schemas.Folder)
+async def create_folder(folder: schemas.FolderCreate, user_id:int, db: AsyncSession = Depends(get_db)):
+    user = await get_current_user(db, user_id)
     print(user)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -36,7 +29,7 @@ async def create_folder(folder: schemas.FolderCreate, db: AsyncSession = Depends
     db.add(db_folder)
     await db.commit()
     await db.refresh(db_folder) # Логика сохранения
-    return JSONResponse(status_code=201, content={"id": db_folder.id})
+    return JSONResponse(status_code=201, content={ "id":  db_folder.id })
 
     # return db_folder
 

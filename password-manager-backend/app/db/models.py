@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Boolean, DateTime
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from datetime import datetime
 
@@ -15,6 +16,7 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     last_login = Column(DateTime, default=datetime.utcnow)
     folders = relationship("Folder", back_populates="user")
+    master_password = Column(JSON, nullable=False)
 
 
 # Таблица паролей
@@ -58,7 +60,8 @@ class Company(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now().replace(microsecond=0))
+
 
 # Таблица пользователей компаний
 class CompanyUser(Base):

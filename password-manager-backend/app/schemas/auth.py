@@ -27,5 +27,6 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    is_admin: bool
     class Config:
         orm_mode = True

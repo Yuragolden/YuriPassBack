@@ -1,3 +1,4 @@
+import uvicorn
 from fastapi import FastAPI
 from .api.endpoints import auth, users, passwords, folders, companies
 from fastapi.middleware.cors import CORSMiddleware

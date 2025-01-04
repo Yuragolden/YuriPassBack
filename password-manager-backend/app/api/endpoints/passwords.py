@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List
-from ...db import crud, schemas, models
+from ...db import crud, schemas
 from ...db.database import get_db
 from ...db.models import Password, User
 from ...db.schemas import PasswordUpdate

@@ -14,12 +14,14 @@ async def authenticate_user(db: AsyncSession, username: str, password: str):
     query = select(User).where(User.username == username)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
-
+    
     if not user:
         return None
     if not pwd_context.verify(password, user.password):
         return None
     return user
+
+# async def check_folder(db: AsyncSession, folder_name: str):
 
 
 # Хеширование пароля
@@ -59,6 +61,7 @@ async def get_user_by_id(user_id: int, db: AsyncSession):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+
 async def get_password_by_id(db: AsyncSession, password_id: int):
     result = await db.execute(select(Password).filter(Password.id == password_id))
     password = result.scalars().first()
@@ -75,7 +78,6 @@ async def get_password_by_name(db: AsyncSession, name: str, user_id: int):
 async def get_passwords(db: AsyncSession):
     result = await db.execute(select(models.Password))
     return result.scalars().all()
-
 
 
 async def update_password(db: AsyncSession, password_id: int, password: schemas.PasswordCreate):

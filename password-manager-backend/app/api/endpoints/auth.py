@@ -72,8 +72,6 @@ async def login_for_access_token(login_request: LoginRequest, db: AsyncSession =
             {"ciphertext": ciphertext, "nonce": nonce, "salt": salt}
         )
 
-        print(decrypted_master_password)
-
         # Проверка совпадения расшифрованного мастер-пароля
         if decrypted_master_password != login_request.master_password:
             raise HTTPException(
@@ -89,9 +87,8 @@ async def login_for_access_token(login_request: LoginRequest, db: AsyncSession =
         )
 
 
-
     access_token = create_access_token(data={"sub": user.username, "userId": user.id })
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "is_admin":user.is_admin}
 
 
 

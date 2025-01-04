@@ -42,7 +42,7 @@ async def is_admin_for_user(db: AsyncSession, admin_id: int, target_user_id: int
     # Проверяем, совпадают ли `company_id` у администратора и пользователя
     return admin.company_id == target_user.company_id
 
-@router.post("/passwords/admin-add/", response_model=PasswordResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/passwords/admin-add", response_model=PasswordResponse, status_code=status.HTTP_201_CREATED)
 async def admin_add_password(
     user_email: str,
     admin_id:int,

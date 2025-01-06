@@ -21,14 +21,12 @@ async def authenticate_user(db: AsyncSession, username: str, password: str):
         return None
     return user
 
-# async def check_folder(db: AsyncSession, folder_name: str):
 
-
-# Хеширование пароля
 def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
     print(bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8'))
     return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
 
 async def create_password(db: AsyncSession, password: schemas.PasswordCreate):
 
@@ -44,6 +42,7 @@ async def create_password(db: AsyncSession, password: schemas.PasswordCreate):
         url=password.url,
         comment=password.comment,
         folder_id=password.folder_id,
+        folder_name=password.folder_name,
         created_at = password.created_at,
     )
 

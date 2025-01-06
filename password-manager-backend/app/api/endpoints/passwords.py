@@ -5,20 +5,15 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List
+from starlette.responses import JSONResponse
 from ...db import crud, schemas
 from ...db.database import get_db
-from ...db.models import Password, User
-from ...db.schemas import PasswordUpdate
+from ...db.models import Password, User, Folder
+from ...db.schemas import PasswordUpdate, FolderCreate
 from ...core.crypto import encrypt_data, decrypt_master_password, decrypt_data
+from .folders import create_folder
 from datetime import datetime
 import random
-
-import logging
-
-# Инициализация логера
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
 
 router = APIRouter()
 
@@ -48,17 +43,14 @@ async def get_master_password(user_id: int, db: AsyncSession) -> str:
 async def create_password(password: schemas.PasswordCreate, user_id: int, db: AsyncSession = Depends(get_db)):
     print(f"Полученные данные: {password.model_dump()}")
 
-    # Получаем пользователя из базы данных, чтобы извлечь его мастер-пароль
     user = await crud.get_user_by_id(user_id, db)
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    # Проверяем, существует ли уже пароль с таким же названием
     db_password = await crud.get_password_by_name(db, name=password.name, user_id=user_id)
     if db_password:
         raise HTTPException(status_code=400, detail="Пароль с этим названием уже существует")
 
-    # Десериализация зашифрованного мастер-пароля из JSON
     try:
         encrypted_master_password = json.loads(json.loads(user.master_password))
 
@@ -71,7 +63,7 @@ async def create_password(password: schemas.PasswordCreate, user_id: int, db: As
             {"ciphertext": ciphertext, "nonce": nonce, "salt": salt}
         )
         print(f"Дешифрованный мастер-пароль: {decrypted_master_password}")
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Ошибка при дешифровке мастер-пароля")
 
 
@@ -93,6 +85,7 @@ async def create_password(password: schemas.PasswordCreate, user_id: int, db: As
                 url=password.url,
                 comment=encrypted_comment,
                 folder_id=password.folder_id,
+                folder_name=password.folder_name,
                 created_at=password.created_at or datetime.now().replace(microsecond=0)
             )
         )
@@ -135,45 +128,60 @@ async def get_password(password_id: int, user_id: int, db: AsyncSession = Depend
         "comment": decrypted_comment,
         "url": password.url,
         "folder_id": password.folder_id,
+        "folder_name": password.folder_name,
     }
 
 
 # Обновление пароля
 @router.put("/{password_id}")
 async def update_password(password_id: int, password_update: PasswordUpdate, db: AsyncSession = Depends(get_db)):
-    # Получаем запись из базы данных
     result = await db.execute(select(Password).filter(Password.id == password_id))
     password = result.scalars().first()
     user_id = password.user_id
-
-
     if not password:
         raise HTTPException(status_code=404, detail="Password not found")
 
-    # Получаем мастер-пароль пользователя
     master_password = await get_master_password(user_id, db)
 
-    # Обновляем поля, если они присутствуют в запросе
     if password_update.name is not None:
         password.name = password_update.name
     if password_update.login is not None:
         password.login = encrypt_data(password_update.login, master_password)  # Шифруем логин
     if password_update.password is not None:
         password.password = encrypt_data(password_update.password, master_password)  # Шифруем пароль
+    if password_update.folder_name is not None:
+        password.folder_name = password_update.folder_name
     if password_update.url is not None:
         password.url = password_update.url
     if password_update.comment is not None:
-        password.comment = encrypt_data(password_update.comment, master_password)  # Шифруем комментарий
-
-    # Обновляем метку времени
+        password.comment = encrypt_data(password_update.comment, master_password)
     password.updated_at = datetime.now().replace(microsecond=0)
 
-    # Сохраняем изменения в базе данных
+    result_folder = await db.execute(
+        select(Folder).filter(Folder.name == password_update.folder_name, Folder.user_id == user_id)
+    )
+    res_folder = result_folder.scalars().first()
+
+    if not res_folder:
+        # Создаем папку, если она не существует
+        res = await create_folder(FolderCreate(name=password_update.folder_name), user_id, db)
+
+        if isinstance(res, JSONResponse):  # Проверяем, что вернулся JSONResponse
+            import json
+            res_body = json.loads(res.body.decode())  # Декодируем body и парсим в JSON
+            folder_id = res_body.get("id")  # Получаем id папки
+            if not folder_id:
+                raise HTTPException(status_code=500, detail="Ошибка при создании папки")
+            password.folder_id = folder_id
+        else:
+            raise HTTPException(status_code=500, detail="Неверный формат ответа при создании папки")
+    else:
+        password.folder_id = res_folder.id
+
     db.add(password)
     await db.commit()
     await db.refresh(password)
 
-    # Формируем и возвращаем ответ
     return {
         "id": password.id,
         "name": password.name,
@@ -183,6 +191,7 @@ async def update_password(password_id: int, password_update: PasswordUpdate, db:
         "comment": password_update.comment,
         "url": password.url,
         "folder_id": password.folder_id,
+        "folder_name": password.folder_name,
     }
 
 #получить все пароли(админ)
@@ -199,7 +208,6 @@ async def delete_password(password_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Password not found")
     return await crud.delete_password(db, password_id=password_id)
 
-
 #получить все пароли пользователя в конкретной папке
 @router.get("/folder/{user_id}/{folder_id}", response_model=List[schemas.Password])
 async def get_folder_passwords(folder_id: int, user_id: int, db: AsyncSession = Depends(get_db)):
@@ -210,18 +218,16 @@ async def get_folder_passwords(folder_id: int, user_id: int, db: AsyncSession = 
         raise HTTPException(status_code=404, detail="Passwords not found for this folder")
     master_password = await get_master_password(user_id, db)
 
-    # Дешифруем данные для каждого пароля
+
     for password in passwords:
         try:
             password.login = decrypt_data(password.login, master_password)
             password.password = decrypt_data(password.password, master_password)
             password.comment = decrypt_data(password.comment, master_password)
         except HTTPException as e:
-            logger.error(f"Decryption failed for user {user_id}, folder {folder_id}: {str(e)}")
             raise e
 
     return passwords
-
 
 #получить все пароли пользователя без папки
 @router.get("/folders/unlisted/{user_id}", response_model=List[schemas.Password])
@@ -242,11 +248,9 @@ async def get_unlisted_passwords(user_id: int, db: AsyncSession = Depends(get_db
             password.password = decrypt_data(password.password, master_password)
             password.comment = decrypt_data(password.comment, master_password)
         except HTTPException as e:
-            logger.error(f"Decryption failed for user {user_id}, folder {None}: {str(e)}")
             raise e
 
     return passwords
-
 
 
 #получить все пароли определенного пользователя
@@ -254,14 +258,11 @@ async def get_unlisted_passwords(user_id: int, db: AsyncSession = Depends(get_db
 async def get_user_passwords(user_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Password).filter(Password.user_id == user_id))
     passwords = result.scalars().all()
-
     if not passwords:
         raise HTTPException(status_code=404, detail="Passwords not found for this user")
 
-    # Получаем мастер-пароль
     master_password = await get_master_password(user_id, db)
 
-    # Дешифруем данные для каждого пароля
     for password in passwords:
         password.login = decrypt_data(password.login, master_password)
         password.password = decrypt_data(password.password, master_password)

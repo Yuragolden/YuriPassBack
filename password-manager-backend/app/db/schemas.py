@@ -10,6 +10,7 @@ class Password(BaseModel):
     password: str
     url: Optional[str] = None
     folder_id: Optional[int] = None
+    folder_name: Optional[str] = None
     comment: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -24,6 +25,7 @@ class PasswordCreate(BaseModel):
     password: str
     url: Optional[str] = None
     folder_id: Optional[int] = None
+    folder_name: Optional[str] = None
     comment: Optional[str] = None
     created_at: Optional[datetime] = None
 
@@ -35,11 +37,10 @@ class PasswordUpdate(BaseModel):
     login: Optional[str]
     password: Optional[str]
     folder_id: Optional[int]
+    folder_name: Optional[str]
     url: Optional[str]
     comment: Optional[str]
     updated_at: Optional[datetime] = None
-
-
     class Config:
         from_attributes = True
 
@@ -54,7 +55,7 @@ class FolderCreate(BaseModel):
 class Folder(FolderCreate):
     id: int
     user_id: int
-
+    name: str
     class Config:
         from_attributes = True
 

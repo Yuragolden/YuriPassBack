@@ -26,23 +26,21 @@ class Password(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'))
     folder_id = Column(Integer, ForeignKey('folders.id'), nullable=True)
+    folder_name = Column(String, ForeignKey('folders.name'), nullable=True)
     name = Column(String, nullable=False)
     login = Column(String, nullable=False)
     password = Column(String, nullable=False)
     url = Column(String, nullable=True)
     comment = Column(String, nullable=True)
-    # is_favorite = Column(Boolean, default=False)
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
 
 # Таблица папок
 class Folder(Base):
     __tablename__ = 'folders'
-
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'))
     name = Column(String, nullable=False)
-
     user = relationship("User", back_populates="folders")
 
 
@@ -71,3 +69,9 @@ class CompanyUser(Base):
     company_id = Column(Integer, ForeignKey('companies.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
     role = Column(String, nullable=False)
+
+class RevokedToken(Base):
+    __tablename__ = 'revoked_tokens'
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, nullable=False, unique=True)
+    revoked_at = Column(DateTime, default=datetime.now().replace(microsecond=0))

@@ -20,18 +20,18 @@ async def create_folder(folder: schemas.FolderCreate, user_id:int, db: AsyncSess
     user = await get_current_user(db, user_id)
     print(user)
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Неверный токен")
 
-    # Создаем папку с привязкой к текущему пользователю
+    result = await db.execute(select(models.Folder).filter(models.Folder.user_id == user.id).filter(models.Folder.name == folder.name))
+    db_folder = result.scalars().first()
+    if db_folder:
+        raise HTTPException(status_code=404, detail="Папка уже существует")
+
     db_folder = models.Folder(name=folder.name, user_id=user.id)
-    print('дура работай')
-    # db_folder = models.Folder(name=folder.name, user_id=3)
     db.add(db_folder)
     await db.commit()
     await db.refresh(db_folder) # Логика сохранения
     return JSONResponse(status_code=201, content={ "id":  db_folder.id })
-
-    # return db_folder
 
 
 # Маршрут для получения всех папок

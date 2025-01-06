@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from ...db.models import User
+from ...db.models import User, RevokedToken
 from ...db.database import get_db
-from ...schemas.auth import RegisterRequest, RegisterResponse, LoginRequest, LoginResponse
+from ...schemas.auth import RegisterRequest, RegisterResponse, LoginRequest, LoginResponse, LogOutResponse, LogOutRequest
 from ...core.security import hash_password, create_access_token
 from ...core.crypto import decrypt_master_password, encrypt_master_password
 from ...db.crud import authenticate_user
@@ -51,6 +51,7 @@ async def register_user(request: RegisterRequest, db: AsyncSession = Depends(get
 
 @router.post("/login", response_model=LoginResponse)
 async def login_for_access_token(login_request: LoginRequest, db: AsyncSession = Depends(get_db)):
+
     user = await authenticate_user(db, login_request.username, login_request.password)
     if not user:
         raise HTTPException(
@@ -90,10 +91,21 @@ async def login_for_access_token(login_request: LoginRequest, db: AsyncSession =
     access_token = create_access_token(data={"sub": user.username, "userId": user.id })
     return {"access_token": access_token, "token_type": "bearer", "is_admin":user.is_admin}
 
+@router.post("/logout")
+async def logout(logout_request: LogOutRequest, db: AsyncSession = Depends(get_db)):
+    # Проверяем, есть ли токен в таблице
+    print(logout_request)
+    query = select(RevokedToken).filter(RevokedToken.token == logout_request.token)
+    result = await db.execute(query)
+    revoked_token = result.scalars().first()
 
+    if revoked_token:
+        return {"message": "Token already revoked"}
 
+    # Добавляем токен в таблицу
+    new_revoked_token = RevokedToken(token=logout_request.token)
+    db.add(new_revoked_token)
+    await db.commit()
 
-
-
-
+    return {"message": "Successfully logged out"}
 

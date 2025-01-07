@@ -65,8 +65,8 @@ async def create_password(password: schemas.PasswordCreate, user_id: int, db: As
         print(f"Дешифрованный мастер-пароль: {decrypted_master_password}")
     except Exception:
         raise HTTPException(status_code=500, detail="Ошибка при дешифровке мастер-пароля")
-
-
+    print("password.comment")
+    print(password.comment)
     # Шифруем данные (логин, комментарий и пароль) с использованием расшифрованного мастер-пароля
     encrypted_login = encrypt_data(password.login, decrypted_master_password)
     encrypted_comment = encrypt_data(password.comment, decrypted_master_password)
@@ -101,6 +101,7 @@ async def generate_password():
     characters = string.ascii_letters + string.digits + string.punctuation
     password = ''.join(random.choice(characters) for _ in range(1, length))
     return password
+
 
 #получить определенный пароль(админ)
 @router.get("/{password_id}", response_model=schemas.Password)
@@ -162,21 +163,25 @@ async def update_password(password_id: int, password_update: PasswordUpdate, db:
     )
     res_folder = result_folder.scalars().first()
 
-    if not res_folder:
-        # Создаем папку, если она не существует
-        res = await create_folder(FolderCreate(name=password_update.folder_name), user_id, db)
+    if password_update.folder_name and password_update.folder_name.strip() != "":
+        if not res_folder:
+            # Создаем папку, если она не существует
+            res = await create_folder(FolderCreate(name=password_update.folder_name), user_id, db)
 
-        if isinstance(res, JSONResponse):  # Проверяем, что вернулся JSONResponse
-            import json
-            res_body = json.loads(res.body.decode())  # Декодируем body и парсим в JSON
-            folder_id = res_body.get("id")  # Получаем id папки
-            if not folder_id:
-                raise HTTPException(status_code=500, detail="Ошибка при создании папки")
-            password.folder_id = folder_id
+            if isinstance(res, JSONResponse):
+                import json
+                res_body = json.loads(res.body.decode())
+                folder_id = res_body.get("id")
+                if not folder_id:
+                    raise HTTPException(status_code=500, detail="Ошибка при создании папки")
+                password.folder_id = folder_id
+            else:
+                raise HTTPException(status_code=500, detail="Неверный формат ответа при создании папки")
         else:
-            raise HTTPException(status_code=500, detail="Неверный формат ответа при создании папки")
+            password.folder_id = res_folder.id
     else:
-        password.folder_id = res_folder.id
+        # Если поле пустое, оставляем folder_id равным None
+        password.folder_id = None
 
     db.add(password)
     await db.commit()
@@ -194,19 +199,13 @@ async def update_password(password_id: int, password_update: PasswordUpdate, db:
         "folder_name": password.folder_name,
     }
 
+
 #получить все пароли(админ)
 @router.get("/", response_model=List[schemas.Password])
 async def list_passwords(db: AsyncSession = Depends(get_db)):
     passwords = await crud.get_passwords(db)
     return passwords
 
-#удалить определенный пароль
-@router.delete("/{password_id}", response_model=schemas.Password)
-async def delete_password(password_id: int, db: AsyncSession = Depends(get_db)):
-    db_password = await crud.get_password_by_id(db, password_id=password_id)
-    if db_password is None:
-        raise HTTPException(status_code=404, detail="Password not found")
-    return await crud.delete_password(db, password_id=password_id)
 
 #получить все пароли пользователя в конкретной папке
 @router.get("/folder/{user_id}/{folder_id}", response_model=List[schemas.Password])
@@ -228,6 +227,7 @@ async def get_folder_passwords(folder_id: int, user_id: int, db: AsyncSession = 
             raise e
 
     return passwords
+
 
 #получить все пароли пользователя без папки
 @router.get("/folders/unlisted/{user_id}", response_model=List[schemas.Password])
@@ -291,3 +291,13 @@ async def get_user_password_byId(user_id: int, password_id: int, db: AsyncSessio
     password.comment = decrypt_data(password.comment, master_password)
 
     return [password]  # Возвращаем пароль в списке, так как это response_model=List[schemas.Password]
+
+
+#удалить определенный пароль
+@router.delete("/{password_id}", response_model=schemas.Password)
+async def delete_password(password_id: int, db: AsyncSession = Depends(get_db)):
+    db_password = await crud.get_password_by_id(db, password_id=password_id)
+    if db_password is None:
+        raise HTTPException(status_code=404, detail="Password not found")
+    return await crud.delete_password(db, password_id=password_id)
+

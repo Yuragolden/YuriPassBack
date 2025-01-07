@@ -1,11 +1,9 @@
-import uvicorn
 from fastapi import FastAPI
-from .api.endpoints import auth, users, passwords, folders, companies
 from fastapi.middleware.cors import CORSMiddleware
-# from ..app_factory import AppFactory   вот это
+
+from .api.endpoints import auth, users, passwords, folders, companies
 
 app = FastAPI(title="Password Manager")
-# app = AppFactory.create_app()          и вот это, остальное удалить
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(users.router, prefix="/users", tags=["users"])
